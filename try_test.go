@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/dsnet/try"
+	"github.com/go-stdx/try"
 )
 
 func Test(t *testing.T) {
