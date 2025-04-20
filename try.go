@@ -133,7 +133,7 @@ import (
 // panicked by this package.
 type wrapError struct {
 	error
-	pc [1]uintptr
+	pc [MaxDepth]uintptr
 }
 
 func (e wrapError) Error() string {
@@ -200,10 +200,15 @@ func F(fn func(...any)) {
 }
 
 func e(err error) {
-	we := wrapError{error: err}
-	// 3: runtime.Callers, e, E
-	runtime.Callers(3, we.pc[:])
-	panic(we)
+	switch oerr := err.(type) {
+	case wrapError:
+		panic(oerr)
+	default:
+		we := wrapError{error: err}
+		// 3: runtime.Callers, e, E
+		runtime.Callers(3, we.pc[:])
+		panic(we)
+	}
 }
 
 // E panics if err is non-nil.
