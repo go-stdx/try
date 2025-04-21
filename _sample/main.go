@@ -8,11 +8,20 @@ import (
 )
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	text()
+	json()
+}
 
-	defer try.Catch()
+func text() {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	defer try.Catch(nil)
 	PanicTry()
-	// FailfromTry()
+}
+
+func json() {
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	defer try.Catch(nil)
+	PanicTry()
 }
 
 func FailfromPanic() {

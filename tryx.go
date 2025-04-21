@@ -1,11 +1,13 @@
 package try
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
-	"reflect"
 	"runtime"
 )
+
+const MaxDepth = 32
 
 func Panic(err error) {
 	e(err)
@@ -23,24 +25,32 @@ func Wrapf(format string, a ...any) error {
 	return we
 }
 
-func Catch(fn ...func(err error)) {
-	if len(fn) == 0 {
-		r(recover(), func(w wrapError) {
-			DefaultCatchHandler(w)
-		})
-		return
+func Catch(fn func(err error)) {
+	if fn == nil {
+		fn = DefaultCatchHandler
 	}
 
 	r(recover(), func(w wrapError) {
-		fn[0](w)
+		fn(w)
 	})
 }
 
-var DefaultCatchHandler = func(err wrapError) {
-	slog.Error("try: recovered: "+err.Error(), "stack", getStackTrace(err.pc[:]))
+var SlogKey = "error"
+
+var DefaultCatchHandler = func(err error) {
+	slog.Error("try: recovered", SlogKey, err)
 }
 
-const MaxDepth = 32
+func (m wrapError) MarshalJSON() ([]byte, error) {
+	v := struct {
+		Error      string   `json:"root"`
+		Stacktrace []string `json:"stack"`
+	}{
+		Error:      m.Error(),
+		Stacktrace: getStackTrace(m.pc[:]),
+	}
+	return json.Marshal(v)
+}
 
 func getStackTrace(stack []uintptr) []string {
 	throwList := make([]string, 0, MaxDepth)
@@ -56,10 +66,3 @@ func getStackTrace(stack []uintptr) []string {
 	}
 	return throwList
 }
-
-type fake struct{}
-
-var (
-	goroot      = runtime.GOROOT()
-	packageName = reflect.TypeOf(fake{}).PkgPath()
-)

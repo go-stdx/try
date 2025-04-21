@@ -70,7 +70,7 @@
 //		return nil
 //	}
 //
-// Quick tour of the API
+// # Quick tour of the API
 //
 // The E family of functions all remove a final error return, panicking if non-nil.
 //
@@ -126,7 +126,6 @@ package try
 
 import (
 	"runtime"
-	"strconv"
 )
 
 // wrapError wraps an error to ensure that we only recover from errors
@@ -137,18 +136,20 @@ type wrapError struct {
 }
 
 func (e wrapError) Error() string {
-	// Retrieve the last path segment of the filename.
-	// We avoid using strings.LastIndexByte to keep dependencies small.
-	frames := runtime.CallersFrames(e.pc[:])
-	frame, _ := frames.Next()
-	file := frame.File
-	for i := len(file) - 1; i >= 0; i-- {
-		if file[i] == '/' {
-			file = file[i+len("/"):]
-			break
-		}
-	}
-	return file + ":" + strconv.Itoa(frame.Line) + ": " + e.error.Error()
+	// // Retrieve the last path segment of the filename.
+	// // We avoid using strings.LastIndexByte to keep dependencies small.
+	// frames := runtime.CallersFrames(e.pc[:])
+	// frame, _ := frames.Next()
+	// file := frame.File
+	// for i := len(file) - 1; i >= 0; i-- {
+	// 	if file[i] == '/' {
+	// 		file = file[i+len("/"):]
+	// 		break
+	// 	}
+	// }
+	// return file + ":" + strconv.Itoa(frame.Line) + ": " + e.error.Error()
+
+	return e.error.Error()
 }
 
 // Unwrap primarily exists for testing purposes.
