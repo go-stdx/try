@@ -9,8 +9,13 @@ import (
 
 const MaxDepth = 32
 
-func Panic(err error) {
-	e(err)
+func Panic(v any) {
+	var rerr error
+	rerr, ok := v.(error)
+	if !ok {
+		rerr = fmt.Errorf("%v", v)
+	}
+	e(rerr)
 }
 
 func Wrap(err error) error {
