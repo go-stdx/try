@@ -126,21 +126,22 @@ package try
 
 import (
 	"runtime"
+	"strconv"
 )
 
-// wrapError wraps an error to ensure that we only recover from errors
+// TryError wraps an error to ensure that we only recover from errors
 // panicked by this package.
-type wrapError struct {
+type TryError struct {
 	error
 	pc [MaxDepth]uintptr
 }
 
-func (e wrapError) Error() string {
+func (e TryError) Error() string {
 	// // Retrieve the last path segment of the filename.
 	// // We avoid using strings.LastIndexByte to keep dependencies small.
-	// frames := runtime.CallersFrames(e.pc[:])
-	// frame, _ := frames.Next()
-	// file := frame.File
+	frames := runtime.CallersFrames(e.pc[:])
+	frame, _ := frames.Next()
+	file := frame.File
 	// for i := len(file) - 1; i >= 0; i-- {
 	// 	if file[i] == '/' {
 	// 		file = file[i+len("/"):]
@@ -148,19 +149,18 @@ func (e wrapError) Error() string {
 	// 	}
 	// }
 	// return file + ":" + strconv.Itoa(frame.Line) + ": " + e.error.Error()
-
-	return e.error.Error()
+	return file + ":" + strconv.Itoa(frame.Line) + ": " + e.error.Error()
 }
 
 // Unwrap primarily exists for testing purposes.
-func (e wrapError) Unwrap() error {
+func (e TryError) Unwrap() error {
 	return e.error
 }
 
-func r(recovered any, fn func(wrapError)) {
+func r(recovered any, fn func(TryError)) {
 	switch ex := recovered.(type) {
 	case nil:
-	case wrapError:
+	case TryError:
 		fn(ex)
 	default:
 		panic(ex)
@@ -170,7 +170,7 @@ func r(recovered any, fn func(wrapError)) {
 // Recover recovers an error previously panicked with an E function.
 // If it recovers an error, it calls fn with the error and the runtime frame in which it occurred.
 func Recover(fn func(err error, frame runtime.Frame)) {
-	r(recover(), func(w wrapError) {
+	r(recover(), func(w TryError) {
 		frames := runtime.CallersFrames(w.pc[:])
 		frame, _ := frames.Next()
 		fn(w.error, frame)
@@ -179,13 +179,13 @@ func Recover(fn func(err error, frame runtime.Frame)) {
 
 // Handle recovers an error previously panicked with an E function and stores it into errptr.
 func Handle(errptr *error) {
-	r(recover(), func(w wrapError) { *errptr = w.error })
+	r(recover(), func(w TryError) { *errptr = w.error })
 }
 
 // HandleF recovers an error previously panicked with an E function and stores it into errptr.
 // If it recovers an error, it calls fn.
 func HandleF(errptr *error, fn func()) {
-	r(recover(), func(w wrapError) {
+	r(recover(), func(w TryError) {
 		*errptr = w.error
 		if w.error != nil {
 			fn()
@@ -197,15 +197,15 @@ func HandleF(errptr *error, fn func()) {
 // The wrapping includes the file and line of the runtime frame in which it occurred.
 // F pairs well with testing.TB.Fatal and log.Fatal.
 func F(fn func(...any)) {
-	r(recover(), func(w wrapError) { f(fn, w) })
+	r(recover(), func(w TryError) { f(fn, w) })
 }
 
 func e(err error) {
 	switch oerr := err.(type) {
-	case wrapError:
+	case TryError:
 		panic(oerr)
 	default:
-		we := wrapError{error: err}
+		we := TryError{error: err}
 		// 3: runtime.Callers, e, E
 		runtime.Callers(3, we.pc[:])
 		panic(we)
@@ -260,7 +260,7 @@ func E4[A, B, C, D any](a A, b B, c C, d D, err error) (A, B, C, D) {
 // This uses the special "line" pragma to set the file and line number to be
 // something consistent. It must be declared last in the file to prevent "line"
 // from affecting the line numbers of anything else in this file.
-func f(fn func(...any), w wrapError) {
+func f(fn func(...any), w TryError) {
 //line try.go:1
 	fn(w)
 }

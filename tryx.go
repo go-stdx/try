@@ -19,34 +19,34 @@ func Panic(v any) {
 }
 
 func Wrap(err error) error {
-	we := wrapError{error: err}
+	we := TryError{error: err}
 	runtime.Callers(2, we.pc[:])
 	return we
 }
 
 func Wrapf(format string, a ...any) error {
-	we := wrapError{error: fmt.Errorf(format, a...)}
+	we := TryError{error: fmt.Errorf(format, a...)}
 	runtime.Callers(2, we.pc[:])
 	return we
 }
 
-func Catch(fn func(err error)) {
+func Catch(fn func(err TryError)) {
 	if fn == nil {
 		fn = DefaultCatchHandler
 	}
 
-	r(recover(), func(w wrapError) {
+	r(recover(), func(w TryError) {
 		fn(w)
 	})
 }
 
 var SlogKey = "error"
 
-var DefaultCatchHandler = func(err error) {
-	slog.Error("try: recovered", SlogKey, err)
+var DefaultCatchHandler = func(err TryError) {
+	slog.Error("try: panic "+err.Error(), SlogKey, err)
 }
 
-func (m wrapError) MarshalJSON() ([]byte, error) {
+func (m TryError) MarshalJSON() ([]byte, error) {
 	v := struct {
 		Error      string   `json:"root"`
 		Stacktrace []string `json:"stack"`
